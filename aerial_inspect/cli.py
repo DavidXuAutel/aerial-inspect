@@ -205,8 +205,8 @@ def _cmd_check_capture(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="aerial-inspect")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    parser = argparse.ArgumentParser(prog="aerial-inspect")
+    sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_plan = sub.add_parser("plan", help="Pre-search mission plan (phases; survey after detection)")
     p_plan.add_argument("config", help="configs/missions/*.yaml")
@@ -250,9 +250,9 @@ def main(argv: list[str] | None = None) -> int:
         ("sim-approach", _cmd_sim_approach),
         ("sim-survey", _cmd_sim_survey),
     ):
-        p = sub.add_parser(name, help=f"Run {name} on AirSim via wam_vgoal_eval")
-        p.add_argument("mission_dir")
-        p.set_defaults(func=fn)
+        sp = sub.add_parser(name, help=f"Run {name} on AirSim via wam_vgoal_eval")
+        sp.add_argument("mission_dir")
+        sp.set_defaults(func=fn)
 
     p_pipe = sub.add_parser("sim-pipeline", help="Full AirSim闭环: search→replan→approach→survey")
     p_pipe.add_argument("config", help="configs/missions/*.yaml")
@@ -272,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
     p_chk.add_argument("capture_dir")
     p_chk.set_defaults(func=_cmd_check_capture)
 
-    args = p.parse_args(argv)
+    args = parser.parse_args(argv)
     return int(args.func(args))
 
 
