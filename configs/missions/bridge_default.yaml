@@ -1,0 +1,35 @@
+mission_id: bridge_river_001
+instruction: "在该河段找到主桥，环绕拍摄并用于三维建模"
+
+search_area:
+  center_xy: [-1020.0, -220.0]   # 仿真/任务区中心；真机改为 GPS 或地图坐标
+  radius_m: 120.0
+  altitude_m: 45.0
+
+# M1 可人工标定桥中心；M2 由 vgoal 检测更新
+bridge_centroid_xyz: [-1010.0, -215.0, 42.0]
+
+target:
+  visual_prompt: "bridge"
+  category: "bridge"
+  standoff_dist_m: 30.0
+  standoff_height_m: 18.0
+
+survey:
+  pattern: horizontal_orbit
+  radius_m: 40.0
+  altitude_m: 45.0
+  num_laps: 2
+  points_per_lap: 24
+  heading_overlap: 0.75
+  camera_hfov_deg: 80.0
+
+capture:
+  native_width: 1280
+  native_height: 720
+  jpeg_quality: 92
+  min_frames: 120
+
+reconstruct:
+  backend: colmap
+  require_gps: false
