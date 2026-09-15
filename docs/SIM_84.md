@@ -12,7 +12,8 @@ Mac / H100 客户端 ──► 10.229.20.84:41451 (AirSim RPC, 0.0.0.0 绑定)
                          └── 本机 UE 渲染 (bridge zone)
 ```
 
-**不要**再连 `10.229.20.125:41451`（125 是另一条评测线）。
+**不要**再连 `10.229.20.125:41451` 做桥梁 eval（125 是 Phase-2 评测线）。  
+从 Mac 拉 125 配置用 SSH：`cursor-125-public`（见 `~/.ssh/config`）。
 
 ## 84 上一次性准备
 
@@ -20,8 +21,9 @@ Mac / H100 客户端 ──► 10.229.20.84:41451 (AirSim RPC, 0.0.0.0 绑定)
 cd ~/Projects/aerial-inspect
 git pull origin main
 
-# 从 125 只同步渲染参数 settings.json；场景为 bridge 用 env_airsim_16
-SRC_PASS='***' bash scripts/sync_renderer_from_125.sh
+# 从 125 同步 settings.json（Mac 上默认 SSH: cursor-125-public）
+bash scripts/sync_renderer_from_125.sh
+# 若在 84 上无 cf 配置: SRC_SSH=yao@10.229.20.125 SRC_PASS='***' bash scripts/sync_renderer_from_125.sh
 
 # 启动本机桥梁渲染器（自动 patch 外部绑定 + 跳过 vulkaninfo 依赖）
 bash scripts/start_renderer_84.sh
