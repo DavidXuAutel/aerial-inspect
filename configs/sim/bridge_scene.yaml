@@ -1,0 +1,19 @@
+# Bridge inspect AirSim scene (84 local renderer).
+# Same map binary as OpenFly env_airsim_16, but mission uses the river-bridge zone (~y=-220),
+# NOT the Phase-2 long routes on 125 (~y=-530).
+scene_id: env_airsim_16
+map_role: bridge_river_zone
+# On 84: 127.0.0.1. Mac / remote: 10.229.20.84 (RPC bound 0.0.0.0 after patch_airsim_external_bind.sh)
+airsim_host_local: 127.0.0.1
+airsim_host_public: 10.229.20.84
+airsim_bind_ip: 0.0.0.0
+airsim_port: 41451
+vehicle: drone_1
+camera: front_custom
+
+# Default spawn for bridge scene check (matches bridge_default search area)
+spawn_xyz: [-1020.0, -220.0, 45.0]
+spawn_yaw_deg: 0.0
+
+# Alternate probe near outdoor_long route corridor (y≈-220 band)
+alt_spawn_xyz: [-801.0, -220.0, 40.0]
