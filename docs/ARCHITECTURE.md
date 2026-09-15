@@ -38,6 +38,8 @@
 
 ## 数据流
 
-1. `MissionSpec`（YAML）→ `plan_mission()` → `artifacts/<id>/waypoints.json`
-2. 真机：`WamPlatform.run_waypoint_mission()` → `artifacts/captures/run_*`
-3. `run_offline_reconstruct.py` → `artifacts/models/<id>/`
+1. `MissionSpec`（YAML）→ `plan_mission()` → `phase_plan.json`（survey 待定）
+2. SEARCH：`run_wam_search.sh` → `orin_deploy/run_*` + `traj.jsonl`
+3. `replan-survey`：从 traj 估计 `bridge_centroid_xyz` → `waypoints.json` + `wam_waypoints.json`
+4. APPROACH + SURVEY：WAM 子进程逐阶段执行
+5. `run_offline_reconstruct.py` → `artifacts/models/<id>/`

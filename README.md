@@ -23,17 +23,30 @@ pip install -e ".[dev]"
 export AERIAL_WAM_ROOT=~/Projects/aerial-wam-v2
 export AERIAL_VGOAL_ROOT=~/Projects/aerial-vgoal-wam
 
-# 1) 从任务 YAML 生成环绕航点
-aerial-inspect plan configs/missions/bridge_default.yaml -o artifacts/mission_001
+# 1) 预规划（SEARCH 阶段配置；环绕航点待检测后生成）
+aerial-inspect plan configs/missions/bridge_default.yaml -o artifacts/bridge_river_001
+aerial-inspect export-wam-phases artifacts/bridge_river_001
 
-# 2) 导出 WAM 可执行的 waypoint 清单（真机 / 仿真）
-aerial-inspect export-wam artifacts/mission_001
+# 2) 语义搜索 → 自动估计桥中心 → 生成环绕航点
+bash scripts/run_wam_search.sh artifacts/bridge_river_001
+aerial-inspect replan-survey artifacts/bridge_river_001 --export-wam
 
-# 3) 仿真干跑（仅打印 FSM，不连飞控）
+# 3) 抵近 + 环绕采集
+bash scripts/run_wam_approach.sh artifacts/bridge_river_001
+bash scripts/run_wam_survey.sh artifacts/bridge_river_001
+
+# 或一键全流程
+bash scripts/run_mission_pipeline.sh configs/missions/bridge_default.yaml
+
+# 4) AirSim 仿真（10.229.20.84 / 125）
+bash scripts/run_sim_pipeline.sh configs/missions/bridge_default.yaml
+# 详见 docs/SIM_84.md
+
+# 5) 干跑（fixture traj 模拟 SEARCH 检测，不连飞控）
 python scripts/run_mission_dryrun.py configs/missions/bridge_default.yaml
 
-# 4) 离线重建（需本机安装 colmap）
-python scripts/run_offline_reconstruct.py artifacts/captures/run_xxx
+# 6) 离线重建（需本机安装 colmap）
+python scripts/run_offline_reconstruct.py ~/Projects/aerial-wam-v2/artifacts/orin_deploy/run_xxx
 ```
 
 ## 目录

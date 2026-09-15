@@ -31,7 +31,34 @@ python -m experiments.aerial.scripts.wam_vgoal_deploy \
   --record-auto
 ```
 
-Survey 阶段使用本仓生成的 `wam_waypoints.json`，由 `aerial-inspect export-wam` 写出，再由 `scripts/run_wam_survey.sh` 顺序执行。
+端到端闭环：**语义 SEARCH → 自动估计桥中心 → replan 环绕 → APPROACH → SURVEY → 离线重建**。
+
+| 步骤 | 产物 | 命令 |
+|------|------|------|
+| 预规划 | `phase_plan.json` | `aerial-inspect plan ...` |
+| SEARCH | `phase_runs.json`, `traj.jsonl` | `run_wam_search.sh` |
+| 估计 + 环绕 | `detected_centroid.json`, `waypoints.json` | `aerial-inspect replan-survey --export-wam` |
+| APPROACH / SURVEY | 采集 `run_*` | `run_wam_approach.sh`, `run_wam_survey.sh` |
+| 重建 | `artifacts/models/*` | `run_offline_reconstruct.py` |
+
+```bash
+aerial-inspect plan configs/missions/bridge_default.yaml -o artifacts/bridge_river_001
+aerial-inspect export-wam-phases artifacts/bridge_river_001
+
+bash scripts/run_wam_search.sh artifacts/bridge_river_001
+aerial-inspect replan-survey artifacts/bridge_river_001 --export-wam
+
+bash scripts/run_wam_approach.sh artifacts/bridge_river_001
+bash scripts/run_wam_survey.sh artifacts/bridge_river_001
+
+# 一键
+bash scripts/run_mission_pipeline.sh configs/missions/bridge_default.yaml
+
+# 真机
+MOCK_CAMERA=0 bash scripts/run_mission_pipeline.sh configs/missions/bridge_default.yaml
+```
+
+桥中心从 SEARCH 的 `traj.jsonl` 中 tracker 锁定的 `goal_rel` + 位姿反算世界坐标（median）。YAML 中 `bridge_centroid_xyz` 仅作 debug 覆盖（`plan --include-survey`）。
 
 ## 不纳入 WAM 主线的内容
 

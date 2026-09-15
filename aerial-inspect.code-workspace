@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "aerial-inspect"
+    },
+    {
+      "path": "../aerial-wam-v2",
+      "name": "aerial-wam-v2 (WAM dep)"
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder:aerial-inspect}/.venv/bin/python",
+    "terminal.integrated.env.osx": {
+      "AERIAL_WAM_ROOT": "${workspaceFolder:aerial-wam-v2 (WAM dep)}",
+      "AERIAL_VGOAL_ROOT": "${env:HOME}/Projects/aerial-vgoal-wam"
+    }
+  }
+}
