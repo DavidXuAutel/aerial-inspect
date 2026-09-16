@@ -36,6 +36,20 @@ def _cmd_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _first_traj_jsonl(root: Path) -> Path | None:
+    """Resolve wam_vgoal_eval output (traj.jsonl or traj/route00.jsonl)."""
+    if root.is_file():
+        return root
+    direct = root / "traj.jsonl"
+    if direct.is_file():
+        return direct
+    nested = root / "traj" / "route00.jsonl"
+    if nested.is_file():
+        return nested
+    matches = sorted(root.glob("**/route*.jsonl"))
+    return matches[0] if matches else None
+
+
 def _resolve_search_traj(
     mission_dir: Path,
     from_run: str | None,
@@ -51,9 +65,9 @@ def _resolve_search_traj(
         run = Path(from_run).resolve()
         if run.is_file():
             return run
-        traj = run / "traj.jsonl"
-        if traj.is_file():
-            return traj
+        found = _first_traj_jsonl(run)
+        if found is not None:
+            return found
         raise FileNotFoundError(f"no traj.jsonl under {run}")
 
     runs_path = mission_dir / "phase_runs.json"
@@ -62,24 +76,25 @@ def _resolve_search_traj(
         search = data.get("search") or {}
         traj = search.get("traj")
         if traj:
-            p = Path(traj).resolve()
-            if p.is_file():
-                return p
+            found = _first_traj_jsonl(Path(traj).resolve())
+            if found is not None:
+                return found
         run_dir = search.get("run_dir")
         if run_dir:
-            p = Path(run_dir) / "traj.jsonl"
-            if p.is_file():
-                return p
+            found = _first_traj_jsonl(Path(run_dir).resolve())
+            if found is not None:
+                return found
 
-    sim_traj = sim_runs_dir(mission_dir) / "search" / "traj.jsonl"
-    if sim_traj.is_file():
-        return sim_traj
+    sim_root = sim_runs_dir(mission_dir) / "search"
+    found = _first_traj_jsonl(sim_root)
+    if found is not None:
+        return found
 
     run = find_latest_run(leg="search")
     if run is not None:
-        p = run / "traj.jsonl"
-        if p.is_file():
-            return p
+        found = _first_traj_jsonl(run)
+        if found is not None:
+            return found
 
     raise FileNotFoundError(
         "no SEARCH traj; pass --from-traj / --from-run, or run search (sim or deploy) first"

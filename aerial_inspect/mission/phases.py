@@ -36,6 +36,7 @@ def build_phase_plan(spec: MissionSpec) -> Dict[str, Any]:
     return {
         "mission_id": spec.mission_id,
         "visual_prompt": spec.target.visual_prompt,
+        "target_category": spec.target.category,
         "search": {
             "center_xy": [scx, scy],
             "radius_m": spec.search.radius_m,

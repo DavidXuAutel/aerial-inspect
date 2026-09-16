@@ -114,6 +114,7 @@ def _base_eval_cmd(
     annotation: Path,
     traj_out: Path,
     visual_prompt: str,
+    target_class: str,
     max_steps: int,
     search_area_half_m: float,
 ) -> List[str]:
@@ -135,7 +136,7 @@ def _base_eval_cmd(
         "--visual-prompt",
         visual_prompt,
         "--target-class",
-        "bridge",
+        target_class,
         "--max-steps",
         str(max_steps),
         "--traj-out",
@@ -152,8 +153,17 @@ def _base_eval_cmd(
         "--device",
         os.environ.get("SIM_DEVICE", "cuda"),
     ]
-    if det == "yolo":
-        cmd.extend(["--yolo-imgsz", os.environ.get("SIM_YOLO_IMGSZ", "1280")])
+    if det in ("yolo", "open_vocab", "semantic"):
+        cmd.extend(
+            [
+                "--yolo-model",
+                os.environ.get("SIM_YOLO_MODEL", "yolov8s-worldv2.pt"),
+                "--yolo-imgsz",
+                os.environ.get("SIM_YOLO_IMGSZ", "1280"),
+                "--yolo-conf",
+                os.environ.get("SIM_YOLO_CONF", "0.1"),
+            ]
+        )
     return cmd
 
 
@@ -162,10 +172,11 @@ def run_sim_search(mission_dir: Path) -> subprocess.CompletedProcess[str]:
     spec = load_spec_from_mission_dir(mission_dir)
     phases = json.loads((mission_dir / "phase_plan.json").read_text(encoding="utf-8"))
     visual = str(phases.get("visual_prompt", "bridge"))
+    target_class = str(phases.get("target_category", spec.target.category))
     search = phases.get("search", {})
     run_dir = sim_runs_dir(mission_dir) / "search"
     run_dir.mkdir(parents=True, exist_ok=True)
-    traj_out = run_dir / "traj.jsonl"
+    traj_out = run_dir / "traj"
 
     scx, scy = spec.search.center_xy
     alt = float(search.get("altitude_m", spec.search.altitude_m))
@@ -176,6 +187,7 @@ def run_sim_search(mission_dir: Path) -> subprocess.CompletedProcess[str]:
         annotation=ann,
         traj_out=traj_out,
         visual_prompt=visual,
+        target_class=target_class,
         max_steps=int(search.get("max_steps", 400)),
         search_area_half_m=float(spec.search.radius_m),
     )
@@ -191,9 +203,10 @@ def run_sim_approach(mission_dir: Path) -> subprocess.CompletedProcess[str]:
     mission_dir = mission_dir.resolve()
     phases = json.loads((mission_dir / "phase_plan.json").read_text(encoding="utf-8"))
     visual = str(phases.get("visual_prompt", "bridge"))
+    spec = load_spec_from_mission_dir(mission_dir)
+    target_class = str(phases.get("target_category", spec.target.category))
     approach = phases.get("approach", {})
     goal = approach["goal"]
-    spec = load_spec_from_mission_dir(mission_dir)
     scx, scy = spec.search.center_xy
     alt = float(spec.search.altitude_m)
     start = [scx, scy, alt]
@@ -201,7 +214,7 @@ def run_sim_approach(mission_dir: Path) -> subprocess.CompletedProcess[str]:
 
     run_dir = sim_runs_dir(mission_dir) / "approach"
     run_dir.mkdir(parents=True, exist_ok=True)
-    traj_out = run_dir / "traj.jsonl"
+    traj_out = run_dir / "traj"
     route = _route(start, g, instruction=visual)
     ann = _write_phase_annotation(mission_dir, route, "approach")
 
@@ -209,6 +222,7 @@ def run_sim_approach(mission_dir: Path) -> subprocess.CompletedProcess[str]:
         annotation=ann,
         traj_out=traj_out,
         visual_prompt=visual,
+        target_class=target_class,
         max_steps=int(approach.get("max_steps", 200)),
         search_area_half_m=float(spec.search.radius_m) * 0.25,
     )
@@ -227,6 +241,7 @@ def run_sim_survey(mission_dir: Path) -> int:
     phases = json.loads((mission_dir / "phase_plan.json").read_text(encoding="utf-8"))
     visual = str(phases.get("visual_prompt", "bridge"))
     spec = load_spec_from_mission_dir(mission_dir)
+    target_class = str(phases.get("target_category", spec.target.category))
     scx, scy = spec.search.center_xy
     alt = float(spec.search.altitude_m)
     default_start = [scx, scy, alt]
@@ -242,7 +257,7 @@ def run_sim_survey(mission_dir: Path) -> int:
         start = default_start if i == 0 else g
         run_dir = survey_root / f"wp_{i:03d}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        traj_out = run_dir / "traj.jsonl"
+        traj_out = run_dir / "traj"
         route = _route(start, g, yaw=float(wp.get("yaw_rad", 0.0)), instruction=visual)
         ann = run_dir / "annotation.json"
         ann.write_text(
@@ -253,6 +268,7 @@ def run_sim_survey(mission_dir: Path) -> int:
             annotation=ann,
             traj_out=traj_out,
             visual_prompt=visual,
+            target_class=target_class,
             max_steps=int(os.environ.get("SIM_MAX_STEPS_PER_WP", "150")),
             search_area_half_m=20.0,
         )
@@ -273,7 +289,7 @@ def _record_sim_phase(mission_dir: Path, phase: str, run_dir: Path) -> None:
     data[phase] = {
         "backend": "airsim_eval",
         "run_dir": str(run_dir),
-        "traj": str(run_dir / "traj.jsonl") if phase != "survey" else str(run_dir),
+        "traj": str(run_dir / "traj" / "route00.jsonl") if phase != "survey" else str(run_dir),
         "recorded_at": time.time(),
     }
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")

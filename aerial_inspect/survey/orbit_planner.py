@@ -111,7 +111,8 @@ def plan_survey_waypoints(spec: MissionSpec) -> List[Waypoint]:
 
     pattern = str(spec.survey.pattern)
     if pattern == "facade_arc":
-        return plan_facade_arc(center, spec.survey)
+        bearing = math.radians(float(spec.survey.approach_bearing_deg))
+        return plan_facade_arc(center, spec.survey, approach_bearing_rad=bearing)
     return plan_horizontal_orbit(center, spec.survey)
 
 

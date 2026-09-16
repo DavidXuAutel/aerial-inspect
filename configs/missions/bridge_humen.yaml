@@ -1,0 +1,35 @@
+mission_id: bridge_humen_001
+instruction: "在虎门大桥走廊找到主桥结构，环绕拍摄并用于三维建模"
+
+search_area:
+  center_xy: [-950.0, -60.0]
+  radius_m: 180.0
+  altitude_m: 85.0
+
+# Deck-level centroid (HumenCorridor local coords); skip SEARCH auto-detect when debugging
+# bridge_centroid_xyz: [-950.0, -60.0, 55.0]
+
+target:
+  visual_prompt: "bridge"
+  category: "bridge"
+  standoff_dist_m: 35.0
+  standoff_height_m: 25.0
+
+survey:
+  pattern: horizontal_orbit
+  radius_m: 50.0
+  altitude_m: 85.0
+  num_laps: 2
+  points_per_lap: 24
+  heading_overlap: 0.75
+  camera_hfov_deg: 70.0
+
+capture:
+  native_width: 1280
+  native_height: 720
+  jpeg_quality: 92
+  min_frames: 120
+
+reconstruct:
+  backend: colmap
+  require_gps: false

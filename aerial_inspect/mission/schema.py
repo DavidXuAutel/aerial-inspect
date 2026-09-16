@@ -39,6 +39,7 @@ class SurveySpec:
     points_per_lap: int = 24
     heading_overlap: float = 0.75
     facade_arc_deg: float = 120.0
+    approach_bearing_deg: float = 90.0
     camera_hfov_deg: float = 80.0
 
 
@@ -98,6 +99,7 @@ class MissionSpec:
                 points_per_lap=int(sv.get("points_per_lap", 24)),
                 heading_overlap=float(sv.get("heading_overlap", 0.75)),
                 facade_arc_deg=float(sv.get("facade_arc_deg", 120.0)),
+                approach_bearing_deg=float(sv.get("approach_bearing_deg", 90.0)),
                 camera_hfov_deg=float(sv.get("camera_hfov_deg", 80.0)),
             ),
             capture=CaptureSpec(

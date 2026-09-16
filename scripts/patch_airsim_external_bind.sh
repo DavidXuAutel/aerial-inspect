@@ -2,7 +2,11 @@
 # Bind AirSim RPC to all interfaces (0.0.0.0:41451) for cross-host clients (Mac / H100).
 set -euo pipefail
 
-PERSIST="${AIRSIM_PERSISTENT:-$HOME/aerial_airsim_persistent}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/scene_common.sh"
+
+PERSIST="$AIRSIM_PERSISTENT"
 PUBLIC_IP="${AIRSIM_PUBLIC_HOST:-10.229.20.84}"
 BIND_IP="${AIRSIM_BIND_IP:-0.0.0.0}"
 
@@ -30,8 +34,7 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
 fi
 
 patch_json "$PERSIST/AirSim/settings.json"
-scene_settings="$PERSIST/scene/env_airsim_16/LinuxNoEditor/AirVLN/Binaries/Linux/settings.json"
-patch_json "$scene_settings"
+patch_json "$AIRSIM_SCENE_SETTINGS"
 
 mkdir -p "$HOME/Documents/AirSim"
 ln -sfn "$PERSIST/AirSim/settings.json" "$HOME/Documents/AirSim/settings.json"

@@ -1,0 +1,23 @@
+# Avant-AirSim HumenCorridor (虎门大桥) on 84 — CARLA+AirSim co-sim.
+scene_id: humen_corridor
+map_role: humen_bridge_corridor
+renderer: avant_airsim
+carla_map: HumenCorridor
+
+airsim_host_local: 127.0.0.1
+airsim_host_public: 10.229.20.84
+airsim_bind_ip: 0.0.0.0
+airsim_port: 41463
+carla_port: 2200
+
+# Avant-AirSim default multirotor + RGB camera (not OpenFly drone_1/front_custom)
+vehicle: SimpleFlight
+camera: "0"
+
+# Over bridge deck near patrol acceptance spawn (humen-patrol-config ~ -944,-59,61)
+spawn_xyz: [-950.0, -60.0, 85.0]
+spawn_yaw_deg: -32.0
+
+# SEARCH / scene-check alternate: pull back along corridor
+alt_spawn_xyz: [-1100.0, -120.0, 95.0]
+alt_spawn_yaw_deg: -32.0
