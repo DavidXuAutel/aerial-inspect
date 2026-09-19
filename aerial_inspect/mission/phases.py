@@ -22,7 +22,7 @@ def compute_approach_goal(spec: MissionSpec) -> Tuple[float, float, float]:
     if dist < 1e-3:
         dx, dy, dist = 1.0, 0.0, 1.0
     ux, uy = dx / dist, dy / dist
-    standoff = float(spec.target.standoff_dist_m)
+    standoff = float(spec.target.approach_standoff_dist_m or spec.target.standoff_dist_m)
     gx = float(cx) - ux * standoff
     gy = float(cy) - uy * standoff
     gz = max(float(cz) + float(spec.target.standoff_height_m), float(spec.survey.altitude_m))
@@ -41,12 +41,12 @@ def build_phase_plan(spec: MissionSpec) -> Dict[str, Any]:
             "center_xy": [scx, scy],
             "radius_m": spec.search.radius_m,
             "altitude_m": spec.search.altitude_m,
-            "max_steps": 400,
+            "max_steps": int(spec.search.max_steps),
             "record_auto": True,
         },
         "approach": {
             "goal": {"x": gx, "y": gy, "z": gz},
-            "standoff_dist_m": spec.target.standoff_dist_m,
+            "standoff_dist_m": float(spec.target.approach_standoff_dist_m or spec.target.standoff_dist_m),
             "max_steps": 200,
             "record_auto": True,
         },

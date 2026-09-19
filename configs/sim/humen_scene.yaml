@@ -14,10 +14,12 @@ carla_port: 2200
 vehicle: SimpleFlight
 camera: "0"
 
-# Over bridge deck near patrol acceptance spawn (humen-patrol-config ~ -944,-59,61)
-spawn_xyz: [-950.0, -60.0, 85.0]
-spawn_yaw_deg: -32.0
+# Main-span tower area, visually confirmed via "虎门大桥" sign + nadir deck-line bearing.
+# AirSim-native coords (CARLA/OpenDRIVE frame differs — do not reuse those numbers here).
+# Offset 80m off-axis from centroid [2400,-20,80] so spawn isn't inside the tower legs.
+spawn_xyz: [2365.0, 55.0, 90.0]
+spawn_yaw_deg: -64.0
 
-# SEARCH / scene-check alternate: pull back along corridor
-alt_spawn_xyz: [-1100.0, -120.0, 95.0]
-alt_spawn_yaw_deg: -32.0
+# SEARCH / scene-check alternate: pull back along corridor toward shore
+alt_spawn_xyz: [2150.0, 260.0, 95.0]
+alt_spawn_yaw_deg: -64.0

@@ -11,6 +11,7 @@ from aerial_inspect.mission.phases import build_phase_plan
 from aerial_inspect.mission.schema import MissionSpec
 from aerial_inspect.survey.coverage import expected_frame_count, heading_overlap_ok
 from aerial_inspect.survey.orbit_planner import estimate_path_length_m, plan_survey_waypoints
+from aerial_inspect.survey.view_planner import plan_survey_views
 
 
 def load_mission_yaml(path: Path) -> MissionSpec:
@@ -30,6 +31,7 @@ def spec_to_dict(spec: MissionSpec) -> Dict[str, Any]:
         "target": spec.target.__dict__,
         "survey": spec.survey.__dict__,
         "bridge_centroid_xyz": list(spec.bridge_centroid_xyz) if spec.bridge_centroid_xyz else None,
+        "bridge_span_axis_deg": spec.bridge_span_axis_deg,
     }
 
 
@@ -58,7 +60,10 @@ def _write_phase_plan(mission_dir: Path, spec: MissionSpec) -> Dict[str, Any]:
 
 
 def _write_survey_waypoints(mission_dir: Path, spec: MissionSpec) -> Tuple[Path, list]:
-    waypoints = plan_survey_waypoints(spec)
+    if str(spec.survey.pattern) in ("span_facade", "span_facade_dual"):
+        waypoints = plan_survey_views(spec, mission_dir)
+    else:
+        waypoints = plan_survey_waypoints(spec)
     wp_path = mission_dir / "waypoints.json"
     wp_path.write_text(
         json.dumps([w.as_dict() for w in waypoints], indent=2, ensure_ascii=False),
@@ -121,10 +126,18 @@ def replan_survey(
     centroid_xyz: Tuple[float, float, float],
     *,
     source: str = "detected",
+    span_axis_deg: Optional[float] = None,
+    mission_yaml: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Apply bridge centroid and generate survey waypoints + refreshed approach goal."""
-    spec = load_spec_from_mission_dir(mission_dir)
+    if mission_yaml is not None and mission_yaml.is_file():
+        spec = load_mission_yaml(mission_yaml)
+        spec.mission_id = load_spec_from_mission_dir(mission_dir).mission_id
+    else:
+        spec = load_spec_from_mission_dir(mission_dir)
     spec.bridge_centroid_xyz = centroid_xyz
+    if span_axis_deg is not None:
+        spec.bridge_span_axis_deg = float(span_axis_deg)
     _write_spec(mission_dir, spec)
     phase_plan = _write_phase_plan(mission_dir, spec)
     wp_path, waypoints = _write_survey_waypoints(mission_dir, spec)
@@ -134,6 +147,7 @@ def replan_survey(
         "survey_status": "ready",
         "centroid_source": source,
         "bridge_centroid_xyz": list(centroid_xyz),
+        "bridge_span_axis_deg": spec.bridge_span_axis_deg,
         "n_waypoints": len(waypoints),
         "path_length_m": round(estimate_path_length_m(waypoints), 2),
         "expected_frames": expected_frame_count(waypoints),

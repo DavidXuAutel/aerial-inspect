@@ -1,37 +1,40 @@
-# LEARTES BANK — standalone corner building (not waterfront row / cluster).
+# LEARTES BANK — south arc only (skip dense north/east); COLMAP-first deliverable.
 mission_id: building_solo_001
-instruction: "围绕街角独栋 LEARTES BANK 建筑近距离立面环绕拍摄并建模"
+instruction: "LEARTES BANK 南弧绕飞（210°–360°），先三维重建"
 
-# Probed corner block: single classical bank, streets on south/east, row only on north
-bridge_centroid_xyz: [-818.0, -96.0, 16.0]
+bridge_centroid_xyz: [-819.96, -76.41, 17.0]
 
 search_area:
-  center_xy: [-818.0, -96.0]
-  radius_m: 18.0
-  altitude_m: 22.0
+  center_xy: [-819.96, -76.41]
+  radius_m: 55.0
+  altitude_m: 26.0
 
 target:
   visual_prompt: "building"
   category: "building"
-  standoff_dist_m: 5.0
+  standoff_dist_m: 45.0
   standoff_height_m: 4.0
 
 survey:
-  pattern: facade_arc
-  radius_m: 5.0
-  altitude_m: 20.0
-  num_laps: 2
-  points_per_lap: 12
-  facade_arc_deg: 100.0
-  approach_bearing_deg: 270.0   # south street side only — avoid water + north row
-  heading_overlap: 0.75
+  pattern: clearance_orbit
+  radius_m: 45.0
+  radius_max_m: 90.0
+  lateral_max_m: 25.0
+  path_curve: linear
+  clearance_m: 12.0
+  orbit_start_deg: 210.0
+  orbit_arc_deg: 150.0
+  altitude_m: 24.0
+  num_laps: 1
+  points_per_lap: 20
+  heading_overlap: 0.80
   camera_hfov_deg: 80.0
 
 capture:
   native_width: 1280
   native_height: 720
   jpeg_quality: 92
-  min_frames: 24
+  min_frames: 20
 
 reconstruct:
   backend: colmap

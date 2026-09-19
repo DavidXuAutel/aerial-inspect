@@ -9,7 +9,7 @@ def test_approach_goal_standoff_from_centroid():
         mission_id="t",
         instruction="",
         search=SearchArea(center_xy=(-1020.0, -220.0)),
-        target=TargetSpec(standoff_dist_m=30.0, standoff_height_m=3.0),
+        target=TargetSpec(approach_standoff_dist_m=30.0, standoff_dist_m=60.0, standoff_height_m=3.0),
         survey=SurveySpec(altitude_m=45.0),
         bridge_centroid_xyz=(-1010.0, -215.0, 42.0),
     )

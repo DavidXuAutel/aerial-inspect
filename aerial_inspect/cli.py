@@ -17,7 +17,11 @@ from aerial_inspect.adapters.wam_sim import (
     sim_runs_dir,
 )
 from aerial_inspect.capture.session import CaptureSessionRef
-from aerial_inspect.mission.centroid import estimate_centroid_from_traj, write_detected_centroid
+from aerial_inspect.mission.centroid import (
+    estimate_centroid_from_traj,
+    estimate_span_axis_from_traj,
+    write_detected_centroid,
+)
 from aerial_inspect.mission.orchestrator import (
     load_spec_from_mission_dir,
     load_mission_yaml,
@@ -104,6 +108,10 @@ def _resolve_search_traj(
 def _cmd_replan_survey(args: argparse.Namespace) -> int:
     mission_dir = Path(args.mission_dir)
 
+    span_axis_deg: float | None = None
+    if args.span_axis_deg is not None:
+        span_axis_deg = float(args.span_axis_deg)
+
     if args.centroid:
         centroid = tuple(float(x) for x in args.centroid)
         source = "manual"
@@ -112,23 +120,53 @@ def _cmd_replan_survey(args: argparse.Namespace) -> int:
             {"status": "ok", "centroid_xyz": list(centroid), "source": source},
         )
     else:
-        traj = _resolve_search_traj(mission_dir, args.from_run, args.from_traj)
-        detection = estimate_centroid_from_traj(
-            traj,
-            extrapolate_standoff_m=float(args.extrapolate_standoff)
-            if args.extrapolate_standoff is not None
-            else None,
-            min_samples=int(args.min_samples),
-        )
-        detection["source_traj"] = str(traj)
-        write_detected_centroid(mission_dir, detection)
-        if detection["status"] != "ok":
-            print(json.dumps(detection, indent=2, ensure_ascii=False))
-            return 1
-        centroid = tuple(detection["centroid_xyz"])
-        source = "detected"
+        det_path = mission_dir / "detected_centroid.json"
+        use_existing = False
+        force_recompute = bool(args.from_traj or args.from_run or args.require_det_hit)
+        if det_path.is_file() and not force_recompute:
+            existing = json.loads(det_path.read_text(encoding="utf-8"))
+            if existing.get("status") == "ok" and existing.get("source") in (
+                "humen_geometric_scan",
+                "humen_visual_probe",
+                "detected",
+            ):
+                centroid = tuple(existing["centroid_xyz"])
+                source = str(existing.get("source", "detected"))
+                use_existing = True
 
-    summary = replan_survey(mission_dir, centroid, source=source)
+        if not use_existing:
+            traj = _resolve_search_traj(mission_dir, args.from_run, args.from_traj)
+            detection = estimate_centroid_from_traj(
+                traj,
+                extrapolate_standoff_m=float(args.extrapolate_standoff)
+                if args.extrapolate_standoff is not None
+                else None,
+                min_samples=int(args.min_samples),
+                require_det_hit=bool(args.require_det_hit),
+                min_goal_rel_dist_m=float(args.min_goal_rel_dist_m),
+            )
+            detection["source_traj"] = str(traj)
+            if span_axis_deg is None:
+                axis_result = estimate_span_axis_from_traj(traj, min_samples=int(args.min_samples))
+                detection["span_axis"] = axis_result
+                if axis_result["status"] == "ok":
+                    span_axis_deg = float(axis_result["span_axis_deg"])
+            detection["source"] = "detected"
+            write_detected_centroid(mission_dir, detection)
+            if detection["status"] != "ok":
+                print(json.dumps(detection, indent=2, ensure_ascii=False))
+                return 1
+            centroid = tuple(detection["centroid_xyz"])
+            source = "detected"
+
+    mission_yaml = Path(args.config) if getattr(args, "config", None) else None
+    summary = replan_survey(
+        mission_dir,
+        centroid,
+        source=source,
+        span_axis_deg=span_axis_deg,
+        mission_yaml=mission_yaml,
+    )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
     if args.export_wam:
@@ -175,6 +213,7 @@ def _cmd_sim_pipeline(args: argparse.Namespace) -> int:
             centroid=None,
             min_samples=3,
             extrapolate_standoff=None,
+            span_axis_deg=None,
             export_wam=True,
         )
     )
@@ -243,12 +282,33 @@ def main(argv: list[str] | None = None) -> int:
     p_rp.add_argument("--centroid", nargs=3, type=float, metavar=("X", "Y", "Z"), help="Manual centroid override")
     p_rp.add_argument("--min-samples", type=int, default=3)
     p_rp.add_argument(
+        "--require-det-hit",
+        action="store_true",
+        help="Only use traj rows where open_vocab/YOLO det_hit=true",
+    )
+    p_rp.add_argument(
+        "--min-goal-rel-dist-m",
+        type=float,
+        default=0.0,
+        help="Reject near-field false locks (goal_rel distance in m)",
+    )
+    p_rp.add_argument(
         "--extrapolate-standoff",
         type=float,
         default=None,
         help="If set, extrapolate centroid beyond goal_rel by this distance (m)",
     )
+    p_rp.add_argument(
+        "--span-axis-deg",
+        type=float,
+        default=None,
+        help="Bridge long-axis bearing (deg); default: PCA from SEARCH traj",
+    )
     p_rp.add_argument("--export-wam", action="store_true", help="Also write wam_phases.json + wam_waypoints.json")
+    p_rp.add_argument(
+        "--config",
+        help="Mission YAML (refresh survey pattern/target from config; keeps mission_id from mission_dir)",
+    )
     p_rp.set_defaults(func=_cmd_replan_survey)
 
     p_rec = sub.add_parser("record-phase-run", help="Link latest WAM orin_deploy run to mission phase")
