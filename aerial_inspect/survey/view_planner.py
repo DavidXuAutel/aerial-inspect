@@ -69,6 +69,37 @@ def load_detection(mission_dir: Path) -> Optional[dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_centerline_xy(path: str | Path) -> Optional[np.ndarray]:
+    """Load deck centerline as Nx2 array from list [[x,y],...] or {points_xy: ...}."""
+    p = Path(path)
+    if not p.is_file():
+        return None
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    if isinstance(raw, dict):
+        pts = raw.get("points_xy") or raw.get("centerline") or raw.get("xy")
+    else:
+        pts = raw
+    if not pts:
+        return None
+    arr = np.asarray(pts, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[1] < 2:
+        return None
+    return arr[:, :2]
+
+
+def resolve_span_extent_m(
+    spec: SurveySpec,
+    detection: Optional[dict],
+) -> float:
+    """Prefer explicit mission span_extent_m (main channel); else detection; else short ellipse."""
+    if float(spec.span_extent_m) > 0:
+        return float(spec.span_extent_m)
+    return estimate_span_extent_m(
+        detection,
+        fallback_m=2.0 * float(spec.radius_m) * max(float(spec.ellipse_aspect), 1.0),
+    )
+
+
 def _facade_pass_waypoints(
     center_xy: Tuple[float, float],
     *,
@@ -275,7 +306,18 @@ def plan_survey_views(spec: MissionSpec, mission_dir: Optional[Path] = None) -> 
     span_axis = resolve_span_axis_deg(spec)
     corridor = tuple(spec.search.center_xy)
     detection = load_detection(mission_dir) if mission_dir else None
-    extent = estimate_span_extent_m(detection, fallback_m=2.0 * spec.survey.radius_m * spec.survey.ellipse_aspect)
+    extent = resolve_span_extent_m(spec.survey, detection)
+    # If a deck centerline is pinned, snap midspan + axis + extent to it (主航道).
+    cl_path = str(spec.survey.centerline_path or "").strip()
+    if cl_path:
+        root = Path(__file__).resolve().parents[2]
+        cl = load_centerline_xy(root / cl_path if not Path(cl_path).is_file() else cl_path)
+        if cl is not None and len(cl) >= 2:
+            mid = cl[len(cl) // 2]
+            center = np.array([float(mid[0]), float(mid[1]), float(center[2])], dtype=np.float64)
+            d = cl[-1] - cl[0]
+            span_axis = float(math.degrees(math.atan2(d[1], d[0])))
+            extent = float(np.linalg.norm(d))
     if pattern == "span_facade_dual":
         return plan_span_facade_dual(
             center,

@@ -50,8 +50,12 @@ class SurveySpec:
     approach_bearing_deg: float = 90.0
     ellipse_aspect: float = 2.0  # semi-major / semi-minor for ellipse_orbit
     span_axis_deg: float = 0.0  # bridge long-axis bearing; overridden by detected axis
+    # Full along-span coverage for span_facade*; 0 → fall back to 2*radius*ellipse_aspect.
+    span_extent_m: float = 0.0
     camera_hfov_deg: float = 80.0
     lap_standoffs_m: Tuple[float, ...] = ()  # per-lap cross-span standoff; empty → target standoffs
+    # Optional deck centerline JSON (list of [x,y] or {points_xy: [...]}).
+    centerline_path: str = ""
 
 
 @dataclass
@@ -124,8 +128,10 @@ class MissionSpec:
                 approach_bearing_deg=float(sv.get("approach_bearing_deg", 90.0)),
                 ellipse_aspect=float(sv.get("ellipse_aspect", 2.0)),
                 span_axis_deg=float(sv.get("span_axis_deg", 0.0)),
+                span_extent_m=float(sv.get("span_extent_m", 0.0)),
                 camera_hfov_deg=float(sv.get("camera_hfov_deg", 80.0)),
                 lap_standoffs_m=tuple(float(x) for x in (sv.get("lap_standoffs_m") or [])),
+                centerline_path=str(sv.get("centerline_path", "")),
             ),
             capture=CaptureSpec(
                 native_width=int(cap.get("native_width", 1280)),

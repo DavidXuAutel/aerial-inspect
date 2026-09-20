@@ -70,6 +70,7 @@ aerial-inspect/
 - [产品定义与里程碑](docs/PRD.md)
 - [架构](docs/ARCHITECTURE.md)
 - [WAM 集成](docs/WAM_INTEGRATION.md)
+- [虎门主桥整桥扫描总结](docs/HUMEN_FULL_BRIDGE.md)
 
 ## 许可
 

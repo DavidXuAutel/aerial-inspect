@@ -1,39 +1,39 @@
-# HumenCorridor (虎门大桥) — M1 demo: dual-side facade for full-bridge 3D.
+# HumenCorridor (虎门大桥) — 主航道主跨双侧立面（AirSim 世界坐标，米）
 mission_id: bridge_humen_001
-instruction: "在虎门大桥走廊找到主桥结构，双侧立面拍摄并用于三维建模"
+instruction: "在虎门大桥走廊找到主航道主桥结构，双侧立面拍摄并用于三维建模"
 
 search_area:
-  # 主航道主跨（视觉确认「虎门大桥」塔牌 + 俯视甲板线测得，AirSim原生坐标）。
-  # 注意：CARLA/OpenDRIVE 坐标系与 AirSim 坐标系不是同一套，不可混用！
-  # 旧pin [-890,-85] 系 OpenDRIVE 坐标误用，落在内陆引桥树林，已废弃。
-  center_xy: [2400.0, -20.0]
-  radius_m: 400.0
+  # 主航道主跨中点（非西塔引桥、非内陆）。旧 OpenDRIVE pin [-890,-85] 已废弃。
+  center_xy: [2724.0, -217.0]
+  radius_m: 450.0
   altitude_m: 95.0
   max_steps: 1200
   pattern: corridor
-  start_yaw_deg: 26.0
+  start_yaw_deg: -31.0
   sweep_spacing_m: 30.0
   waypoint_reach_radius_m: 10.0
 
-# 主航道主跨锚点（AirSim原生坐标：塔牌「虎门大桥」实拍确认 + 俯视甲板线测得桥轴）。
-bridge_centroid_xyz: [2400.0, -20.0, 80.0]
-bridge_span_axis_deg: 26.0
+# 主航道主跨中点（桥面中线 midspan），来自 configs/sim/humen_main_channel_centerline.json
+bridge_centroid_xyz: [2724.0, -217.0, 130.0]
+# 沿桥向方位角（度）：实测桥面中线约 -30.7°，不是旧值 +26°
+bridge_span_axis_deg: -30.7
 
 target:
   visual_prompt: "tower suspension bridge tower cable"
   category: "bridge"
-  approach_standoff_dist_m: 50.0   # near corridor lap (was 25 — clipped tower legs)
-  standoff_dist_m: 60.0            # opposite-side far lap
+  approach_standoff_dist_m: 50.0
+  standoff_dist_m: 60.0
   standoff_height_m: 25.0
 
 survey:
-  # Dual-side facade on 主航道主跨 span（26°，AirSim原生实测），双侧跨航道。
-  # num_laps=2 → near+opposite; =3 adds corridor far; =4 adds tip oblique.
+  # 双侧立面覆盖整段主航道主跨（约 838 m），禁止用短椭圆退化成只扫西塔段。
   pattern: span_facade_dual
   lap_standoffs_m: [50, 60]
   radius_m: 60.0
   ellipse_aspect: 2.2
-  span_axis_deg: 26.0
+  span_axis_deg: -30.7
+  span_extent_m: 838.0
+  centerline_path: configs/sim/humen_centerline.json
   altitude_m: 85.0
   num_laps: 2
   points_per_lap: 0

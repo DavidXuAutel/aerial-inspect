@@ -80,8 +80,9 @@ if [[ ! -f "$MISSION_DIR/waypoints.json" || "${FORCE_SEARCH:-0}" == "1" ]]; then
 elif [[ "${FORCE_SURVEY:-0}" == "1" ]]; then
   echo "=== FORCE_SURVEY: refresh yaml + replan + approach + survey (skip SEARCH) ==="
   "$PY" -m aerial_inspect.cli plan "$CONFIG" -o "$MISSION_DIR"
-  # Prefer mission-yaml pinned centroid/span (主航道) over stale SEARCH lock.
+  # Prefer mission-yaml pinned centroid/span (主航道 midspan) over stale SEARCH lock.
   # Set AERIAL_REPLAN_FROM_SEARCH=1 to force replan from last SEARCH traj instead.
+  # Main-channel gates: span_axis must be ~-31° and span_extent_m >= 800.
   if [[ "${AERIAL_REPLAN_FROM_SEARCH:-0}" != "1" ]] \
     && "$PY" -c "import yaml,sys; d=yaml.safe_load(open(sys.argv[1])); sys.exit(0 if d.get('bridge_centroid_xyz') else 1)" "$CONFIG"; then
     read -r CX CY CZ < <("$PY" -c "import yaml,sys; c=yaml.safe_load(open(sys.argv[1]))['bridge_centroid_xyz']; print(c[0],c[1],c[2])" "$CONFIG")

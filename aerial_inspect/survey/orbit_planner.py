@@ -257,7 +257,10 @@ def plan_survey_waypoints(spec: MissionSpec) -> List[Waypoint]:
         from aerial_inspect.survey.view_planner import plan_span_facade, plan_span_facade_dual
 
         corridor = tuple(spec.search.center_xy)
-        extent = 2.0 * float(spec.survey.radius_m) * max(float(spec.survey.ellipse_aspect), 1.0)
+        if float(spec.survey.span_extent_m) > 0:
+            extent = float(spec.survey.span_extent_m)
+        else:
+            extent = 2.0 * float(spec.survey.radius_m) * max(float(spec.survey.ellipse_aspect), 1.0)
         axis = resolve_span_axis_deg(spec)
         if pattern == "span_facade_dual":
             return plan_span_facade_dual(

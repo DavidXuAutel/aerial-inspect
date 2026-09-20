@@ -24,8 +24,15 @@ qc = out / "qc"
 qc.mkdir(exist_ok=True)
 pts, cols = load_ply_xyzrgb(scan / "complete_points.ply")
 print("raw", len(pts), flush=True)
-cl_path = Path("/tmp/humen_centerline.json")
-cl = np.asarray(json.loads(cl_path.read_text()), dtype=np.float64) if cl_path.exists() else None
+cl_path = Path("/home/ubantu/Projects/aerial-inspect/configs/sim/humen_centerline.json")
+if not cl_path.exists():
+    cl_path = Path("/tmp/humen_centerline.json")
+cl = None
+if cl_path.exists():
+    raw = json.loads(cl_path.read_text())
+    if isinstance(raw, dict):
+        raw = raw.get("points_xy") or raw.get("centerline") or raw.get("xy")
+    cl = np.asarray(raw, dtype=np.float64)
 pts, cols = midspan_high_filter(pts, cols, centerline=cl)
 print("after filter", len(pts), flush=True)
 write_ply(out / "FULL_BRIDGE_complete.ply", pts, cols)

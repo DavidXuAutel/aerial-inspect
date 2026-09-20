@@ -59,10 +59,20 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="artifacts/bridge_humen_001/deck_scan_complete")
     ap.add_argument("--step-m", type=float, default=5.0)
-    ap.add_argument("--centerline", default="/tmp/humen_centerline.json")
+    ap.add_argument(
+        "--centerline",
+        default="configs/sim/humen_centerline.json",
+        help="Main-channel deck centerline (repo path or /tmp override)",
+    )
     args = ap.parse_args()
 
-    xy0 = np.asarray(json.loads(Path(args.centerline).read_text()), dtype=np.float64)
+    cl_path = Path(args.centerline)
+    if not cl_path.is_file() and Path("/tmp/humen_centerline.json").is_file():
+        cl_path = Path("/tmp/humen_centerline.json")
+    raw = json.loads(cl_path.read_text())
+    if isinstance(raw, dict):
+        raw = raw.get("points_xy") or raw.get("centerline") or raw.get("xy")
+    xy0 = np.asarray(raw, dtype=np.float64)
     xy = densify_polyline(xy0, float(args.step_m))
     tang = np.gradient(xy, axis=0)
     tang /= np.linalg.norm(tang, axis=1, keepdims=True) + 1e-9
