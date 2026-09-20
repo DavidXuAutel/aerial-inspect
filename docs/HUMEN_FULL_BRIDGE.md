@@ -152,3 +152,16 @@ bash scripts/pull_from_84.sh bridge_humen_001
 ## 还没做的
 
 相对 [PRD.md](PRD.md) 的 M1–M3：语义搜索、抵近、环绕影像、COLMAP 曾跑过，但旧配置没有严格沿主航道走（中心钉在西塔、桥轴 +26°、立面长度只有约 264 m），稀疏重建只有几百点。规划已改成 midspan + 桥轴 −30.7° + 整跨约 838 m。下一步应用新航点重跑环绕与 COLMAP；深度扫描仍沿 `configs/sim/humen_centerline.json`。
+
+### SEARCH 阶段卡在起飞点（已定位并修复）
+
+复查旧 SEARCH 轨迹（`sim_runs/search/traj/route00.jsonl`）发现：1200 步全跑完，`det_hit` 全程为 0，位置只从 `x=775` 爬到 `x=991` 就再也不动（900 步仅挪动 216 m，之后原地振荡），`intervention_rate=0.8476`——即 84.76% 的步数被 `three_zone` 安全防撞盾牌拦截/覆盖。虎门水域的深度模型会把开阔水面幻觉成障碍物（`env_sim_84_humen.sh` 里早就有这条注释，但只给 SURVEY 阶段加了 `--no-shield`，SEARCH/APPROACH 没加）。
+
+修复：
+- `wam_vgoal_eval.py` 新增 `--no-shield`（此前只有 `wam_phase2_long_eval.py` 有），彻底跳过 three_zone 盾牌构建/`apply_action`/`reset`。
+- `aerial_inspect/adapters/wam_sim.py` 的 `run_sim_search`／`_goto_eval_cmd`（APPROACH 复用）默认带上 `--no-shield`（`SIM_SEARCH_NO_SHIELD` / `SIM_APPROACH_NO_SHIELD`，默认 `1`）。
+- `env_sim_84_humen.sh` 里过期的 `AERIAL_MIN_SEARCH_MAX_X=-600`（配套过期注释"主航道在 spawn/西段走廊"）改成 `2000`，和当前主跨 `x∈[2274,3174]` 对齐；`validate_search_traj.py` 的 median-distance 门槛通过新参数 `--min-goal-rel-dist-m`/`AERIAL_MIN_SEARCH_GOAL_REL_M`（40→15）放宽——corridor 模式沿桥面中线飞行，探测本来就是近距离，不是"疑似误锁"。
+
+用新配置在 84 上重跑 SEARCH 验证：无盾牌拦截（`intervention_rate=0.0`），飞完整段 880 m 主航道（`x: 2299→3179`），探测率从 4.4% 提到 18.9%，`validate_search_traj.py` 通过。
+
+**新发现、未修的问题**：`aerial_inspect/mission/centroid.py::estimate_centroid_from_traj/estimate_span_axis_from_traj` 对 corridor 模式的 `det_hit` 样本做 `pos + body_to_world_delta(yaw, goal_rel)` 取中位数，得到的"检测点"其实更像跟随无人机移动的转向目标，不是稳定的桥体三维定位——用新 SEARCH 轨迹跑出来的自动定心是 `[3189,-212,92.5]`、桥轴 `-179.85°`，和视觉核实过的真值 `[2724,-217,130]` / `-30.7°` 相差很远。已在 `run_humen_sim_pipeline.sh` 的 SEARCH 分支加了一道健全性检查（自动定心和 yaml 里已核实的 `bridge_centroid_xyz` 偏差超阈值就直接 `exit 1`，提示改用 `FORCE_SURVEY=1`），防止这个 bug 静默写入错误航点；但没有修 `centroid.py` 本身的三角定位逻辑。当前 mission 的 `waypoints.json` 仍由人工核实过的 yaml pin（`FORCE_SURVEY` 路径）生成，是安全、正确的。

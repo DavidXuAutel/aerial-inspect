@@ -178,6 +178,7 @@ def _goto_eval_cmd(
     goal_z: float,
     wp_radius_m: Optional[float] = None,
     success_dist_m: Optional[float] = None,
+    no_shield: bool = True,
 ) -> List[str]:
     """Goto a single goal with geometric toward-g (scan pattern has no area planner)."""
     cmd = _base_eval_cmd(
@@ -202,6 +203,11 @@ def _goto_eval_cmd(
             str(success_dist_m if success_dist_m is not None else os.environ.get("SIM_SURVEY_SUCCESS_DIST_M", "10")),
         ]
     )
+    # Humen open-water: depth model hallucinates → three_zone shield can block
+    # forward progress (same root cause SIM_SURVEY_NO_SHIELD works around for
+    # the phase2 SURVEY stack).
+    if no_shield:
+        cmd.append("--no-shield")
     return cmd
 
 
@@ -304,6 +310,11 @@ def run_sim_search(mission_dir: Path) -> subprocess.CompletedProcess[str]:
             "--no-bbox-prior-near",
         ]
     )
+    # Humen open-water: depth model hallucinates → three_zone shield intervenes on
+    # ~85% of SEARCH steps and blocks forward corridor progress (same root cause
+    # SIM_SURVEY_NO_SHIELD already works around for the SURVEY phase).
+    if os.environ.get("SIM_SEARCH_NO_SHIELD", "1") not in ("0", "false", "False"):
+        cmd.append("--no-shield")
     if os.environ.get("SIM_SEARCH_AT_CRUISE", "0") == "1":
         cmd.append("--search-at-cruise")
     if os.environ.get("SIM_SEARCH_AREA_PRIORITY", "0") == "1" or pattern == "corridor":
@@ -404,6 +415,7 @@ def run_sim_approach(mission_dir: Path) -> subprocess.CompletedProcess[str]:
         goal_z=goal_z,
         wp_radius_m=float(os.environ.get("SIM_APPROACH_WP_RADIUS_M", "10")),
         success_dist_m=float(os.environ.get("SIM_APPROACH_SUCCESS_DIST_M", "8")),
+        no_shield=os.environ.get("SIM_APPROACH_NO_SHIELD", "1") not in ("0", "false", "False"),
     )
     env = os.environ.copy()
     env["PYTHONPATH"] = str(wam_root())

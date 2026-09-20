@@ -37,8 +37,9 @@ export SIM_CORRIDOR_YAW_SWEEP_STEP_DEG=5
 export SIM_SEARCH_AREA_PRIORITY=1
 export AERIAL_REQUIRE_DET_HIT=1
 export AERIAL_MIN_SEARCH_X_SPAN_M=200
-# 主航道在 spawn/西段走廊；勿强制搜到东侧城区 x≥980（易 lock 错目标）。
-export AERIAL_MIN_SEARCH_MAX_X="${AERIAL_MIN_SEARCH_MAX_X:--600}"
+# 主航道主跨在 x≈[2274,3174]（视觉确认「虎门大桥」塔牌，见 bridge_humen.yaml）。
+# 旧版本误以为主航道在 spawn/西段走廊 x<1000，已废弃；SEARCH 必须真正飞到主跨附近才算通过。
+export AERIAL_MIN_SEARCH_MAX_X="${AERIAL_MIN_SEARCH_MAX_X:-2000}"
 export AERIAL_APPROACH_MIN_DET_FRACTION=0.03
 # Reject SEARCH centroids that leave the main channel corridor band.
 export AERIAL_CORRIDOR_Y="${AERIAL_CORRIDOR_Y:--50}"
@@ -47,7 +48,11 @@ export AERIAL_CENTROID_X_MAX="${AERIAL_CENTROID_X_MAX:-200}"
 export SIM_APPROACH_Z_HOLD=95
 export SIM_APPROACH_WP_RADIUS_M=10
 export SIM_APPROACH_SUCCESS_DIST_M=8
-export AERIAL_MIN_GOAL_REL_DIST_M=40
+# Corridor pattern flies along the deck centerline itself (not toward it from
+# outside), so genuine detections are naturally close-range (~10-50m) the whole
+# way; a 40m median-distance gate flags real hits as "near-field false lock".
+export AERIAL_MIN_GOAL_REL_DIST_M=15
+export AERIAL_MIN_SEARCH_GOAL_REL_M="${AERIAL_MIN_SEARCH_GOAL_REL_M:-15}"
 export AERIAL_MIN_SEARCH_SAMPLES=10
 export QC_DETECTOR=humen_corridor
 export AERIAL_QC_MIN_FRACTION=0.45

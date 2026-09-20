@@ -40,7 +40,8 @@ if [[ ! -f "$MISSION_DIR/waypoints.json" || "${FORCE_SEARCH:-0}" == "1" ]]; then
   echo "=== validate SEARCH traj (det_hit required) ==="
   if ! "$PY" "$ROOT/scripts/validate_search_traj.py" "$SEARCH_TRAJ" \
       --min-x-span-m "${AERIAL_MIN_SEARCH_X_SPAN_M:-250}" \
-      --min-max-x "${AERIAL_MIN_SEARCH_MAX_X:-1000}"; then
+      --min-max-x "${AERIAL_MIN_SEARCH_MAX_X:-1000}" \
+      --min-goal-rel-dist-m "${AERIAL_MIN_SEARCH_GOAL_REL_M:-40}"; then
     echo "ERROR: SEARCH failed validation — bridge not visually detected in flight." >&2
     echo "  Fix detector/prompt/search area; do not use geometric or structure fallbacks." >&2
     exit 1
@@ -58,6 +59,46 @@ if [[ ! -f "$MISSION_DIR/waypoints.json" || "${FORCE_SEARCH:-0}" == "1" ]]; then
   DET_SOURCE=$("$PY" -c "import json; print(json.load(open('$MISSION_DIR/detected_centroid.json')).get('source',''))")
   if [[ "$DET_SOURCE" != "detected" ]]; then
     echo "ERROR: centroid source must be 'detected', got '$DET_SOURCE'" >&2
+    exit 1
+  fi
+
+  echo "=== sanity-check detected centroid (world_point_from_row triangulates a" \
+       "moving det_hit offset, not a stable landmark — can drift far from the real" \
+       "structure for corridor-pattern SEARCH; reject implausible centroids) ==="
+  if ! "$PY" -c "
+import json, math, sys, yaml
+d = yaml.safe_load(open('$CONFIG'))
+det = json.load(open('$MISSION_DIR/detected_centroid.json'))
+c = det.get('centroid_xyz')
+if not c:
+    print('no centroid_xyz'); sys.exit(1)
+x, y, z = c
+pin = d.get('bridge_centroid_xyz')
+if pin:
+    px, py, pz = pin
+    span = float(d.get('survey', {}).get('span_extent_m', 0.0)) or (
+        2.0 * float(d.get('survey', {}).get('radius_m', 200.0))
+        * float(d.get('survey', {}).get('ellipse_aspect', 2.0))
+    )
+    max_xy = min(max(span * 0.3, 120.0), 250.0)
+    max_z = 25.0
+    dist_xy = math.hypot(x - px, y - py)
+    ok = dist_xy <= max_xy and abs(z - pz) <= max_z
+    print(f'centroid=({x:.1f},{y:.1f},{z:.1f}) vs yaml pin=({px:.1f},{py:.1f},{pz:.1f})'
+          f' dist_xy={dist_xy:.1f}m(max {max_xy:.0f}) dz={abs(z-pz):.1f}m(max {max_z:.0f}) ok={ok}')
+else:
+    sa = d.get('search_area', {})
+    cx, cy = sa.get('center_xy', [0.0, 0.0])
+    radius = float(sa.get('radius_m', 400.0))
+    dist = math.hypot(x - cx, y - cy)
+    ok = dist <= radius and 20.0 <= z <= 250.0
+    print(f'centroid=({x:.1f},{y:.1f},{z:.1f}) dist_from_search_center={dist:.1f}m radius={radius}m ok={ok}')
+sys.exit(0 if ok else 1)
+"; then
+    echo "ERROR: detected centroid is implausible (too far from the known-good" >&2
+    echo "  bridge location / wrong altitude) — likely a near-field steering-point" >&2
+    echo "  artifact from world_point_from_row, not a real bridge localization." >&2
+    echo "  Falling back to the vision-verified YAML pin is safer; set FORCE_SURVEY=1." >&2
     exit 1
   fi
 
